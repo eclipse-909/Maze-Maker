@@ -576,7 +576,6 @@ public class Maze : MonoBehaviour
     
     private static void FindDeadEnds(List<Tile>[,] possTilesMap, bool[,] deadEnds, int r, int c)
     {
-        Debug.Log("FindDeadEnds");/////////////////////////////////
         int openDirections = 0;
         Vector2Int direction = Vector2Int.zero;
         for (int i = 0; i < 4; i++)
