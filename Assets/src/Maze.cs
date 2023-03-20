@@ -203,21 +203,23 @@ public class Maze : MonoBehaviour
                 for (int i = 0; i < 4 && hasSquare; i++)
                     if (!(tiles[i].name[i].Equals('1') && tiles[i].name[(i+1)%4].Equals('1')))
                         hasSquare = false;
-                while (hasSquare)
+                if (hasSquare)
                 {
                     char[][] tileChars = {tiles[0].name.ToCharArray(), tiles[1].name.ToCharArray(), tiles[2].name.ToCharArray(), tiles[3].name.ToCharArray()};
                     //change names here
                     char[] nums = {'0', '1'};
                     for (int i = 0; i < 4; i++)
-                        if (!(path.Contains(coords[i]) || path.Contains(coords[(i+1)%4]))
-                            && !(tileChars[i][(i+1)%4].Equals('0') && tileChars[i][(i+2)%4].Equals('0') && tileChars[i][(i+3)%4].Equals('0'))
-                            && !(tileChars[(i+1)%4][(i+1)%4].Equals('0') && tileChars[(i+1)%4][(i+3)%4].Equals('0') && tileChars[(i+1)%4][i].Equals('0')))
+                    {
+                        //BUG I want it to remove squares even if in the path, but it isn't
+                        bool thisTilePathsToNextTile = path.Contains(coords[i]) && path.Contains(coords[(i+1)%4]);
+                        bool thisTileWillBe0000 = tileChars[i][(i+1)%4].Equals('0') && tileChars[i][(i+2)%4].Equals('0') && tileChars[i][(i+3)%4].Equals('0');
+                        bool nextTileWillBe0000 = tileChars[(i+1)%4][(i+1)%4].Equals('0') && tileChars[(i+1)%4][(i+3)%4].Equals('0') && tileChars[(i+1)%4][i].Equals('0');
+                        if (!(thisTilePathsToNextTile || thisTileWillBe0000 || nextTileWillBe0000))
                         {
                             char newNum = nums[Random.Range(0, nums.Length)];
                             tileChars[i][i] = tileChars[(i+1)%4][(i+2)%4] = newNum;
-                            if (newNum.Equals('0'))
-                                hasSquare = false;
                         }
+                    }
                     foreach (Tile tile in tileData)
                     {
                         if (new string(tileChars[0]).Equals(tile.name))
@@ -232,7 +234,7 @@ public class Maze : MonoBehaviour
                 }
             }
         #endregion
-
+        
         #region open enclosures
         bool[,] accessibleTiles = new bool[rows, columns];
         int numAccessible = AccessibleMoves(possibleTilesMap, accessibleTiles, start);
@@ -274,10 +276,8 @@ public class Maze : MonoBehaviour
             numAccessible += AccessibleMoves(possibleTilesMap, accessibleTiles, falseTile);
         }
         #endregion
-
-        //*region remove extra paths
+        
         #region remove extra paths
-        /*
         bool[,] deadEnds = new bool[rows-2, columns-2];
         int prevCount = -1;
         int count = 0;
@@ -287,8 +287,6 @@ public class Maze : MonoBehaviour
             for (int c = 0; c < columns - 2; c++)
                 if (!deadEnds[r,c])
                     FindDeadEnds(possibleTilesMap, deadEnds, r, c);
-        */
-/*
         //find intersections
         List<List<Vector2Int>> altPaths = new List<List<Vector2Int>>();
         List<List<Vector2Int>> intersections = new List<List<Vector2Int>>();
@@ -353,9 +351,7 @@ public class Maze : MonoBehaviour
                 intDirection[i].RemoveAt(intIndex);
             }
         }
-        */
         #endregion
-        //Debug.Log("Extra paths removed");/////////////////////////////////////////////
         #endregion
 
         #region set tiles to Tilemap
@@ -577,7 +573,7 @@ public class Maze : MonoBehaviour
         }
         return count;
     }
-    /*
+    
     private static void FindDeadEnds(List<Tile>[,] possTilesMap, bool[,] deadEnds, int r, int c)
     {
         Debug.Log("FindDeadEnds");/////////////////////////////////
@@ -596,11 +592,10 @@ public class Maze : MonoBehaviour
         if (openDirections < 2)
         {
             deadEnds[r,c] = true;
-            //if (openDirections == 1)
-                //FindDeadEnds(possTilesMap, deadEnds, r + direction.x, c + direction.y);
+            if (openDirections == 1)
+                FindDeadEnds(possTilesMap, deadEnds, r + direction.x, c + direction.y);
         }
     }
-    */
     #endregion
 
     #region fill 2D arrays with the same value - utilizes semi-deep cloning
