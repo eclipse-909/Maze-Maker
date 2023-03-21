@@ -210,55 +210,16 @@ public class Maze : MonoBehaviour
                     char[] nums = {'0', '1'};
                     for (int i = 0; i < 4; i++)
                     {
-                        if (!(path.Contains(coords[i]) && path.Contains(coords[(i+1)%4])))
+                        bool thisTilePathsToNextTile = path.Contains(coords[i]) && path.Contains(coords[(i+1)%4]);
+                        bool thisTileWillBe0000 = tileChars[i][(i+1)%4].Equals('0') && tileChars[i][(i+2)%4].Equals('0') && tileChars[i][(i+3)%4].Equals('0');
+                        bool nextTileWillBe0000 = tileChars[(i+1)%4][(i+1)%4].Equals('0') && tileChars[(i+1)%4][(i+3)%4].Equals('0') && tileChars[(i+1)%4][i].Equals('0');
+                        if (!(thisTilePathsToNextTile || thisTileWillBe0000 || nextTileWillBe0000))
                         {
-                            char newNum = nums[Random.Range(0, 2)];
+                            char newNum = nums[Random.Range(0, nums.Length)];
                             tileChars[i][i] = tileChars[(i+1)%4][(i+2)%4] = newNum;
-                            if (new string(tileChars[i]).Equals("0000"))
-                            {
-                                Vector2Int adjacentCoord1 = coords[i] + directions[(i+2)%4];
-                                Vector2Int adjacentCoord2 = coords[i] + directions[(i+3)%4];
-                                if (adjacentCoord1.x > 0 && adjacentCoord1.x < rows - 1 && adjacentCoord1.y > 0 && adjacentCoord1.y < columns - 1 && !path.Contains(adjacentCoord1))
-                                {
-                                    char[] charTileName = possibleTilesMap[adjacentCoord1.x, adjacentCoord1.y][0].name.ToCharArray();
-                                    tileChars[i][(i+2)%4] = charTileName[i] = '1';
-                                    possibleTilesMap[adjacentCoord1.x, adjacentCoord1.y] = GetPossTiles(new string(charTileName));
-                                    Debug.Log("1: " + GetPossTiles(new string(charTileName)).Count);////////////////////////////////////////
-                                }
-                                if (adjacentCoord2.x > 0 && adjacentCoord2.x < rows - 1 && adjacentCoord2.y > 0 && adjacentCoord2.y < columns - 1 && !path.Contains(adjacentCoord2))
-                                {
-                                    char[] charTileName = possibleTilesMap[adjacentCoord2.x, adjacentCoord2.y][0].name.ToCharArray();
-                                    tileChars[i][(i+3)%4] = charTileName[(i+1)%4] = '1';
-                                    possibleTilesMap[adjacentCoord2.x, adjacentCoord2.y] = GetPossTiles(new string(charTileName));
-                                    Debug.Log("2: " + GetPossTiles(new string(charTileName)).Count);////////////////////////////////////////
-                                }
-                            }
-                            if (new string(tileChars[(i+1)%4]).Equals("0000"))
-                            {
-                                Vector2Int adjacentCoord1 = coords[(i+1)%4] + directions[i];
-                                Vector2Int adjacentCoord2 = coords[(i+1)%4] + directions[(i+3)%4];
-                                if (adjacentCoord1.x > 0 && adjacentCoord1.x < rows - 1 && adjacentCoord1.y > 0 && adjacentCoord1.y < columns - 1 && !path.Contains(adjacentCoord1))
-                                {
-                                    char[] charTileName = possibleTilesMap[adjacentCoord1.x, adjacentCoord1.y][0].name.ToCharArray();
-                                    tileChars[(i+1)%4][i] = charTileName[(i+2)%4] = '1';
-                                    possibleTilesMap[adjacentCoord1.x, adjacentCoord1.y] = GetPossTiles(new string(charTileName));
-                                    Debug.Log("3: " + GetPossTiles(new string(charTileName)).Count);////////////////////////////////////////
-                                }
-                                if (adjacentCoord2.x > 0 && adjacentCoord2.x < rows - 1 && adjacentCoord2.y > 0 && adjacentCoord2.y < columns - 1 && !path.Contains(adjacentCoord2))
-                                {
-                                    char[] charTileName = possibleTilesMap[adjacentCoord2.x, adjacentCoord2.y][0].name.ToCharArray();
-                                    tileChars[(i+1)%4][(i+3)%4] = charTileName[(i+1)%4] = '1';
-                                    possibleTilesMap[adjacentCoord2.x, adjacentCoord2.y] = GetPossTiles(new string(charTileName));
-                                    Debug.Log("4: " + GetPossTiles(new string(charTileName)).Count);////////////////////////////////////////
-                                }
-                            }
-                            Debug.Log("5: " + GetPossTiles(new string(tileChars[i])).Count);////////////////////////////////////////
-                            Debug.Log("6: " + GetPossTiles(new string(tileChars[(i+1)%4])).Count);////////////////////////////////////////
-                            Debug.Log("7: " + new string(tileChars[i]));///////////////////////////////////////////////////
-                            Debug.Log("8: " + new string(tileChars[(i+1)%4]));///////////////////////////////////////////////////
-                            possibleTilesMap[coords[i].x, coords[i].y] = GetPossTiles(new string(tileChars[i]));
-                            possibleTilesMap[coords[(i+1)%4].x, coords[(i+1)%4].y] = GetPossTiles(new string(tileChars[(i+1)%4]));
                         }
+                        possibleTilesMap[coords[i].x, coords[i].y] = GetPossTiles(new string(tileChars[i]));
+                        possibleTilesMap[coords[(i+1)%4].x, coords[(i+1)%4].y] = GetPossTiles(new string(tileChars[(i+1)%4]));
                     }
                 }
             }
@@ -295,13 +256,8 @@ public class Maze : MonoBehaviour
             char[] charTrue = possibleTilesMap[trueTile.x, trueTile.y][0].name.ToCharArray();
             charFalse[index] = '1';
             charTrue[(index + 2) % 4] = '1';
-            foreach (Tile tile in tileData)
-            {
-                if (tile.name.Equals(new string(charFalse)))
-                    possibleTilesMap[falseTile.x, falseTile.y][0] = tile;
-                if (tile.name.Equals(new string(charTrue)))
-                    possibleTilesMap[trueTile.x, trueTile.y][0] = tile;
-            }
+            possibleTilesMap[falseTile.x, falseTile.y] = GetPossTiles(new string(charFalse));
+            possibleTilesMap[trueTile.x, trueTile.y] = GetPossTiles(new string(charTrue));
             numAccessible += AccessibleMoves(possibleTilesMap, accessibleTiles, falseTile);
         }
         #endregion open enclosures
@@ -369,11 +325,8 @@ public class Maze : MonoBehaviour
                 char[] adjacentName = possibleTilesMap[(intersections[i][intIndex] + directions[intDirection[i][intIndex]]).x, (intersections[i][intIndex] + directions[intDirection[i][intIndex]]).y][0].name.ToCharArray();
                 thisName[intDirection[i][intIndex]] = '0';
                 adjacentName[(intDirection[i][intIndex] + 2) % 4] = '0';
-                foreach (Tile tile in tileData)
-                    if (tile.name.Equals(new string(thisName)))
-                        possibleTilesMap[intersections[i][intIndex].x, intersections[i][intIndex].y][0] = tile;
-                    else if (tile.name.Equals(new string(adjacentName)))
-                        possibleTilesMap[(intersections[i][intIndex] + directions[intDirection[i][intIndex]]).x, (intersections[i][intIndex] + directions[intDirection[i][intIndex]]).y][0] = tile;
+                possibleTilesMap[intersections[i][intIndex].x, intersections[i][intIndex].y] = GetPossTiles(new string(thisName));
+                possibleTilesMap[(intersections[i][intIndex] + directions[intDirection[i][intIndex]]).x, (intersections[i][intIndex] + directions[intDirection[i][intIndex]]).y] = GetPossTiles(new string(adjacentName));
                 intersections[i].RemoveAt(intIndex);
                 intDirection[i].RemoveAt(intIndex);
             }
