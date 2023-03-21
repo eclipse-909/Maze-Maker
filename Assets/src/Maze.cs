@@ -220,6 +220,10 @@ public class Maze : MonoBehaviour
                         }
                         possibleTilesMap[coords[i].x, coords[i].y] = GetPossTiles(new string(tileChars[i]));
                         possibleTilesMap[coords[(i+1)%4].x, coords[(i+1)%4].y] = GetPossTiles(new string(tileChars[(i+1)%4]));
+                        if (possibleTilesMap[coords[i].x, coords[i].y].Count > 1)
+                            PickTile(possibleTilesMap, new Vector2Int(coords[i].x, coords[i].y));
+                        if (possibleTilesMap[coords[(i+1)%4].x, coords[(i+1)%4].y].Count > 1)
+                            PickTile(possibleTilesMap, new Vector2Int(coords[(i+1)%4].x, coords[(i+1)%4].y));
                     }
                 }
             }
@@ -258,6 +262,10 @@ public class Maze : MonoBehaviour
             charTrue[(index + 2) % 4] = '1';
             possibleTilesMap[falseTile.x, falseTile.y] = GetPossTiles(new string(charFalse));
             possibleTilesMap[trueTile.x, trueTile.y] = GetPossTiles(new string(charTrue));
+            if (possibleTilesMap[falseTile.x, falseTile.y].Count > 1)
+                PickTile(possibleTilesMap, new Vector2Int(falseTile.x, falseTile.y));
+            if (possibleTilesMap[trueTile.x, trueTile.y].Count > 1)
+                PickTile(possibleTilesMap, new Vector2Int(trueTile.x, trueTile.y));
             numAccessible += AccessibleMoves(possibleTilesMap, accessibleTiles, falseTile);
         }
         #endregion open enclosures
@@ -270,28 +278,37 @@ public class Maze : MonoBehaviour
                 if (!deadEnds[r,c])
                     FindDeadEnds(possibleTilesMap, deadEnds, r, c);
         //find intersections
-        /*
+        List<AltPath> altPaths = new List<AltPath>();
+        for (int i = 1; i < path.Count - 1; i++)
+            for (int j = 0; j < 4; j++)
+            {
+                Vector2Int adjacentPos = path[i] + directions[j];
+                if (adjacentPos.x > 0 && adjacentPos.x < rows - 1 && adjacentPos.y > 0 && adjacentPos.y < columns - 1)
+                    if (possibleTilesMap[path[i].x, path[i].y][0].name[j].Equals('1') && !deadEnds[adjacentPos.x - 1, adjacentPos.y - 1] && !path.Contains(adjacentPos) && !AltPathsContainsTile(altPaths, adjacentPos))
+                        GetAltPath(altPaths);
+            }
+
+
+        /* OLD
         List<List<Vector2Int>> altPaths = new List<List<Vector2Int>>();
-        List<List<Vector2Int>> intersections = new List<List<Vector2Int>>();
-        List<List<int>> intDirection = new List<List<int>>();
-        for (int i = 0; i < path.Count; i++)
+        List<List<Vector2Int>> intersections = new List<List<Vector2Int>>();//a list of intersections with the main path for each alt path
+        List<List<int>> intDirection = new List<List<int>>();//direction from the main path tile to the intersection
+        for (int i = 1; i < path.Count - 1; i++)
         {
             List<Vector2Int> forkTiles = new List<Vector2Int>();
             for (int j = 0; j < 4; j++)
             {
                 Vector2Int adjacentPos = path[i] + directions[j];
-                if (possibleTilesMap[path[i].x, path[i].y][0].name[j].Equals('1') && !deadEnds[adjacentPos.x, adjacentPos.y] && !path.Contains(adjacentPos))
-                    forkTiles.Add(adjacentPos);
+                if (adjacentPos.x > 0 && adjacentPos.x < rows - 1 && adjacentPos.y > 0 && adjacentPos.y < columns - 1)
+                    if (possibleTilesMap[path[i].x, path[i].y][0].name[j].Equals('1') && !deadEnds[adjacentPos.x - 1, adjacentPos.y - 1] && !path.Contains(adjacentPos))
+                        forkTiles.Add(adjacentPos);
             }
             foreach (Vector2Int forkTile in forkTiles)
             {
                 bool forkTileinPath = false;
-                for (int p = 0; p < altPaths.Count; p++)
+                for (int p = 0; p < altPaths.Count && !forkTileinPath; p++)
                     if (altPaths[p].Contains(forkTile))
-                    {
                         forkTileinPath = true;
-                        break;
-                    }
                 if (!forkTileinPath)
                 {
                     List<Vector2Int> newPath = new List<Vector2Int> {forkTile};
@@ -301,36 +318,44 @@ public class Maze : MonoBehaviour
                         for (int j = 0; j < 4; j++)
                         {
                             Vector2Int adjacentPos = newPath[k] + directions[j];
-                            if (possibleTilesMap[newPath[k].x, newPath[k].y][0].name[j].Equals('1') && !deadEnds[adjacentPos.x, adjacentPos.y] && !newPath.Contains(adjacentPos))
-                                if (path.Contains(adjacentPos))
+                            if (adjacentPos.x > 0 && adjacentPos.x < rows - 1 && adjacentPos.y > 0 && adjacentPos.y < columns - 1)
+                                if (possibleTilesMap[newPath[k].x, newPath[k].y][0].name[j].Equals('1') && !deadEnds[adjacentPos.x - 1, adjacentPos.y - 1] && !newPath.Contains(adjacentPos))
                                 {
-                                    if (!intersections[intersections.Count - 1].Contains(adjacentPos))
+                                    if (path.Contains(adjacentPos))
                                     {
-                                        intersections[intersections.Count - 1].Add(adjacentPos);
-                                        intDirection[intersections.Count - 1].Add(j);
-                                    }
-                                } else
-                                    newPath.Add(adjacentPos);
+                                        if (!intersections[intersections.Count - 1].Contains(adjacentPos))
+                                        {
+                                            intersections[intersections.Count - 1].Add(adjacentPos);
+                                            intDirection[intersections.Count - 1].Add(j);
+                                        }
+                                    } else
+                                        newPath.Add(adjacentPos);
+                                }
                         }
+                    altPaths.Add(newPath);
                 }
             }
         }
         //remove all but one intersection from each path
+        //BUG - it's not removing the right intersections
         for (int i = 0; i < intersections.Count; i++)
-        {
             while (intersections[i].Count > 1)
             {
                 int intIndex = Random.Range(0, intersections[i].Count);
-                char[] thisName = possibleTilesMap[intersections[i][intIndex].x, intersections[i][intIndex].y][0].name.ToCharArray();
-                char[] adjacentName = possibleTilesMap[(intersections[i][intIndex] + directions[intDirection[i][intIndex]]).x, (intersections[i][intIndex] + directions[intDirection[i][intIndex]]).y][0].name.ToCharArray();
-                thisName[intDirection[i][intIndex]] = '0';
-                adjacentName[(intDirection[i][intIndex] + 2) % 4] = '0';
-                possibleTilesMap[intersections[i][intIndex].x, intersections[i][intIndex].y] = GetPossTiles(new string(thisName));
-                possibleTilesMap[(intersections[i][intIndex] + directions[intDirection[i][intIndex]]).x, (intersections[i][intIndex] + directions[intDirection[i][intIndex]]).y] = GetPossTiles(new string(adjacentName));
+                Vector2Int pathInt = intersections[i][intIndex];
+                Vector2Int altPathInt = new Vector2Int((pathInt + directions[intDirection[i][intIndex]]).x, (pathInt + directions[intDirection[i][intIndex]]).y);
+                char[] thisName = possibleTilesMap[pathInt.x, pathInt.y][0].name.ToCharArray();
+                char[] adjacentName = possibleTilesMap[altPathInt.x, altPathInt.y][0].name.ToCharArray();
+                thisName[intDirection[i][intIndex]] = adjacentName[(intDirection[i][intIndex] + 2) % 4] = '0';
+                possibleTilesMap[pathInt.x, pathInt.y] = GetPossTiles(new string(thisName));
+                possibleTilesMap[altPathInt.x, altPathInt.y] = GetPossTiles(new string(adjacentName));
+                if (possibleTilesMap[pathInt.x, pathInt.y].Count > 1)
+                    PickTile(possibleTilesMap, new Vector2Int(pathInt.x, pathInt.y));
+                if (possibleTilesMap[altPathInt.x, altPathInt.y].Count > 1)
+                    PickTile(possibleTilesMap, new Vector2Int(altPathInt.x, altPathInt.y));
                 intersections[i].RemoveAt(intIndex);
                 intDirection[i].RemoveAt(intIndex);
             }
-        }
         */
         #endregion remove extra paths
         #endregion backtrack
@@ -344,8 +369,6 @@ public class Maze : MonoBehaviour
             for (int c = 0; c < columns; c++)
             {
                 Vector3Int thisTile = new Vector3Int(c, -r);
-                if (possibleTilesMap[r,c].Count > 1)
-                    PickTile(possibleTilesMap, new Vector2Int(r,c));
                 mazeMap.SetTile(thisTile, possibleTilesMap[r,c][0]);
                 if (possibleRedTilesMap[r,c].Count == 1 && pathGrid[r,c])
                     pathMap.SetTile(thisTile, possibleRedTilesMap[r,c][0]);
@@ -536,7 +559,9 @@ public class Maze : MonoBehaviour
         }
         PickTile(possTilesMap, coord);
     }
-    
+    #endregion
+
+    #region backtracking
     private static int AccessibleMoves(List<Tile>[,] possTilesMap, bool[,] accessibleTiles, Vector2Int coord)
     {
         int count = 1;
@@ -586,6 +611,17 @@ public class Maze : MonoBehaviour
             if (tileName.Equals(tile.name))
                 possTiles.Add(tile);
         return possTiles;
+    }
+    
+    private static void GetAltPath(List<AltPath> altPaths)
+    {}
+
+    private static bool AltPathsContainsTile(List<AltPath> list, Vector2Int coords)
+    {
+        foreach (AltPath altPath in list)
+            if (altPath.tilesInPath.Contains(coords))
+                return true;
+        return false;
     }
     #endregion
 
@@ -663,4 +699,39 @@ public class Maze : MonoBehaviour
         Debug.Log(str);
     }
     #endregion
+
+    public class AltPath
+    {
+        public List<Vector2Int> tilesInPath {get;}
+        public List<Intersection> intersections {get;}
+
+        public AltPath()
+        {
+            tilesInPath = new List<Vector2Int>();
+            intersections = new List<Intersection>();
+        }
+
+        public void AddTile(Vector2Int coords) {tilesInPath.Add(coords);}
+
+        public void AddIntersection(Vector2Int mainCoords, Vector2Int altCoords) {intersections.Add(new Intersection(mainCoords, altCoords));}
+
+        public AltPath RemoveRandomIntersections()
+        {
+            while (intersections.Count > 1)
+                intersections.RemoveAt(Random.Range(0, intersections.Count));
+            return this;
+        }
+
+        public class Intersection
+        {
+            private Vector2Int mainPathCoords;
+            private Vector2Int altPathCoords;
+
+            public Intersection(Vector2Int mainCoords, Vector2Int altCoords)
+            {
+                mainPathCoords = mainCoords;
+                altPathCoords = altCoords;
+            }
+        }
+    }
 }
