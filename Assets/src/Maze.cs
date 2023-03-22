@@ -116,7 +116,7 @@ public class Maze : MonoBehaviour
         Fill(possDirectionsMap, directions);
         Vector2Int[,] chosenDirectionMap = new Vector2Int[rows, columns];
         //loop through and create each tile in the path
-        int numBacktracks = 0;///////////////////////////////////////////testing
+        int numBacktracks = 0;
         while (canMove)
         {
             //if it backtracks too much, it will simply start over and make a brand new path at the same starting location
@@ -178,8 +178,8 @@ public class Maze : MonoBehaviour
         //collapse path
         for (int i = 1; i < path.Count - 2; i++)
         {
-            CollapsePathTile(possibleTilesMap, path[i], path[i + 1], path[i - 1]);
-            CollapsePathTile(possibleRedTilesMap, path[i], path[i + 1], path[i - 1]);
+            CollapsePathTile(possibleTilesMap, path[i], path[i + 1], path[i - 1], false);
+            CollapsePathTile(possibleRedTilesMap, path[i], path[i + 1], path[i - 1], true);
         }
 
         //collapse and pick remaining tiles in map
@@ -188,7 +188,7 @@ public class Maze : MonoBehaviour
                 if (possibleTilesMap[r,c].Count > 1)
                 {
                     CollapseTile(possibleTilesMap, new Vector2Int(r, c));
-                    PickTile(possibleTilesMap, new Vector2Int(r, c));
+                    PickTile(possibleTilesMap, new Vector2Int(r, c), false);
                 }
         #endregion
         
@@ -222,7 +222,7 @@ public class Maze : MonoBehaviour
             altPaths.Remove(altPaths[0].RemoveRandomIntersections(possibleTilesMap));
         }
         #endregion remove extra paths
-        
+
         #region remove squares
         for (int r = 1; r < rows - 2; r++)
             for (int c = 1; c < columns - 2; c++)
@@ -294,6 +294,8 @@ public class Maze : MonoBehaviour
         #endregion backtrack
 
         #region set tiles to Tilemap
+        PrintPath(pathGrid);////////////////////////////////////////
+        PrintPossTileMap(possibleRedTilesMap);///////////////////////////////////////
         //set tiles to Tilemaps
         staticMapGrid.transform.localPosition = new Vector3(-2*columns, rows + (0.5f*columns), 0);
         Camera.main.orthographicSize = 3 * Mathf.Max(rows, columns);
@@ -303,7 +305,7 @@ public class Maze : MonoBehaviour
             {
                 Vector3Int thisTile = new Vector3Int(c, -r);
                 if (possibleTilesMap[r,c].Count > 1)
-                    PickTile(possibleTilesMap, new Vector2Int(r,c));
+                    PickTile(possibleTilesMap, new Vector2Int(r,c), false);
                 mazeMap.SetTile(thisTile, possibleTilesMap[r,c][0]);
                 if (possibleRedTilesMap[r,c].Count == 1 && pathGrid[r,c])
                     pathMap.SetTile(thisTile, possibleRedTilesMap[r,c][0]);
@@ -324,7 +326,7 @@ public class Maze : MonoBehaviour
                     CollapseEdgeTile(possTilesMap, edges[i], false, false);
     }
 
-    private static void PickTile(List<Tile>[,] possTilesMap, Vector2Int coord)
+    private static void PickTile(List<Tile>[,] possTilesMap, Vector2Int coord, bool red)
     {
         //picks the actual tile to be used by getting a random tile from the possibleTiles
         if (possTilesMap[coord.x, coord.y].Count > 1)
@@ -384,7 +386,6 @@ public class Maze : MonoBehaviour
     private static void CollapseTile(List<Tile>[,] possTilesMap, Vector2Int coord)
     {
         //gets all adjacent tiles and collapses this tile based on possibilities of adjacent tiles
-        
         //i also happens to equal the character index in the tile name that needs to match to (i+2)%4
         for (int i = 0; i < 4; i++)
         {
@@ -465,10 +466,10 @@ public class Maze : MonoBehaviour
         for (int i = 0; i < possTilesMap[coord.x, coord.y].Count; i++)
             if (!possTilesMap[coord.x, coord.y][i].name.Equals(thisName))
                 possTilesMap[coord.x, coord.y].RemoveAt(i--);
-        PickTile(possTilesMap, coord);
+        PickTile(possTilesMap, coord, red);
     }
 
-    private static void CollapsePathTile(List<Tile>[,] possTilesMap, Vector2Int coord, Vector2Int nextCoord, Vector2Int prevCoord)
+    private static void CollapsePathTile(List<Tile>[,] possTilesMap, Vector2Int coord, Vector2Int nextCoord, Vector2Int prevCoord, bool red)
     {
         for (int i = 0; i < 4; i++)
         {
@@ -479,10 +480,10 @@ public class Maze : MonoBehaviour
                     string tileName = possTilesMap[coord.x, coord.y][j].name;
                     if (tileName.Contains("red") || tileName.Contains("opn") || tileName.Contains("edg"))
                         tileName = tileName.Substring(3);
-                    if (!tileName[i].Equals('1'))
+                    if (tileName[i].Equals('0'))
                         possTilesMap[coord.x, coord.y].RemoveAt(j--);
                 }
-            else if (adjacent != prevCoord && pathGrid[adjacent.x, adjacent.y])
+            else if ((adjacent != prevCoord && pathGrid[adjacent.x, adjacent.y]))
                 for (int j = 0; j < possTilesMap[coord.x, coord.y].Count; j++)
                 {
                     string tileName = possTilesMap[coord.x, coord.y][j].name;
@@ -492,7 +493,7 @@ public class Maze : MonoBehaviour
                         possTilesMap[coord.x, coord.y].RemoveAt(j--);
                 }
         }
-        PickTile(possTilesMap, coord);
+        PickTile(possTilesMap, coord, red);
     }
     #endregion
 
@@ -509,10 +510,8 @@ public class Maze : MonoBehaviour
             int newX = (coord + directions[i]).x;
             int newY = (coord + directions[i]).y;
             if (newX >= 1 && newX < possTilesMap.GetLength(0) - 1 && newY >= 1 && newY < possTilesMap.GetLength(1) - 1)
-            {
                 if (name[i].Equals('1') && !accessibleTiles[newX, newY])
                     count += AccessibleMoves(possTilesMap, accessibleTiles, coord + directions[i]);
-            }
         }
         return count;
     }
@@ -559,9 +558,8 @@ public class Maze : MonoBehaviour
                     {
                         thisAltPath.AddTile(adjacentTile);
                         GetAltPath(altPaths, possTilesMap, deadEnds, thisAltPath, adjacentTile);
-                    } else {
+                    } else
                         thisAltPath.AddIntersection(adjacentTile, thisTile);
-                    }
         }
     }
 
