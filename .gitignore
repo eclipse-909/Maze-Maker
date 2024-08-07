@@ -1,10 +1,6 @@
+/.git
 /.vscode
-/Assembly-CSharp.csproj
 /Library
 /Logs
-/Maze Maker.sln
 /obj
-/Packages
-/ProjectSettings
 /Temp
-/UserSettings
